@@ -1,68 +1,58 @@
 import java.util.Arrays;
+import java.util.Random;
 
 /**
- * UC3: Historical Trade Volume Analysis
- * Focus: High-performance sorting (O(n log n)) and merging datasets.
+ * UC4: Portfolio Return Sorting
+ * Focus: Advanced Quick Sort (Pivot selection) and Dual-criteria Sorting.
  */
-class Trade {
-    String id;
-    int volume;
+class Asset {
+    String ticker;
+    double returnRate;
+    double volatility;
 
-    public Trade(String id, int volume) {
-        this.id = id;
-        this.volume = volume;
+    public Asset(String ticker, double returnRate, double volatility) {
+        this.ticker = ticker;
+        this.returnRate = returnRate;
+        this.volatility = volatility;
     }
 
     @Override
     public String toString() {
-        return id + ":" + volume;
+        return String.format("[%s | Return: %.1f%% | Vol: %.1f%%]", ticker, returnRate, volatility);
     }
 }
 
 public class Main {
 
     public static void main(String[] args) {
-        // Initial dataset for Session A
-        Trade[] sessionA = {
-                new Trade("T3", 500),
-                new Trade("T1", 100),
-                new Trade("T2", 300)
+        Asset[] portfolio = {
+                new Asset("TSLA", 8.0, 35.0),
+                new Asset("AAPL", 12.0, 20.0),
+                new Asset("GOOG", 15.0, 18.0),
+                new Asset("MSFT", 12.0, 15.0) // Tie with AAPL on return, lower volatility
         };
 
-        System.out.println("=== UC3: HISTORICAL TRADE VOLUME ANALYSIS ===");
+        System.out.println("=== UC4: PORTFOLIO RETURN SORTING SYSTEM ===");
 
-        // 1. Merge Sort (Stable, Ascending)
-        System.out.println("\n--- Step 1: Merge Sort (Ascending Volume) ---");
-        mergeSort(sessionA, 0, sessionA.length - 1);
-        System.out.println("Sorted Session A: " + Arrays.toString(sessionA));
+        // 1. Merge Sort (Preserve original order for ties - Stability)
+        System.out.println("\n--- Step 1: Merge Sort (Ascending Return) ---");
+        Asset[] mergeSorted = portfolio.clone();
+        mergeSort(mergeSorted, 0, mergeSorted.length - 1);
+        printArray(mergeSorted);
 
-        // 2. Quick Sort (In-place, Descending)
-        Trade[] sessionB = {
-                new Trade("T6", 200),
-                new Trade("T4", 600),
-                new Trade("T5", 400)
-        };
-        System.out.println("\n--- Step 2: Quick Sort (Descending Volume) ---");
-        quickSort(sessionB, 0, sessionB.length - 1);
-        System.out.println("Sorted Session B: " + Arrays.toString(sessionB));
+        // 2. Quick Sort (Descending Return + Ascending Volatility)
+        // Uses Median-of-Three for pivot selection to avoid O(n^2) worst case.
+        System.out.println("\n--- Step 2: Quick Sort (Desc Return + Asc Volatility) ---");
+        Asset[] quickSorted = portfolio.clone();
+        quickSort(quickSorted, 0, quickSorted.length - 1);
+        printArray(quickSorted);
 
-        // 3. Merge Two Sorted Lists (Ascending)
-        // Note: For merging, both lists must be sorted in the same direction.
-        // We'll quickly sort Session B ascending first to demonstrate the merge logic.
-        mergeSort(sessionB, 0, sessionB.length - 1);
-
-        System.out.println("\n--- Step 3: Merging Morning & Afternoon Sessions ---");
-        Trade[] combinedReport = mergeSessions(sessionA, sessionB);
-        System.out.println("Combined Report: " + Arrays.toString(combinedReport));
-
-        // 4. Compute Total Volume
-        int totalVolume = 0;
-        for (Trade t : combinedReport) totalVolume += t.volume;
-        System.out.println("\nTOTAL TRADE VOLUME: " + totalVolume);
+        System.out.println("\n" + "=".repeat(45));
+        System.out.println("Optimization: Median-of-Three pivot used for Quick Sort.");
     }
 
-    // --- MERGE SORT IMPLEMENTATION (O(n log n)) ---
-    public static void mergeSort(Trade[] arr, int left, int right) {
+    // --- MERGE SORT (Stability check) ---
+    public static void mergeSort(Asset[] arr, int left, int right) {
         if (left < right) {
             int mid = left + (right - left) / 2;
             mergeSort(arr, left, mid);
@@ -71,65 +61,58 @@ public class Main {
         }
     }
 
-    private static void merge(Trade[] arr, int left, int mid, int right) {
-        int n1 = mid - left + 1;
-        int n2 = right - mid;
-
-        Trade[] L = new Trade[n1];
-        Trade[] R = new Trade[n2];
-
-        for (int i = 0; i < n1; ++i) L[i] = arr[left + i];
-        for (int j = 0; j < n2; ++j) R[j] = arr[mid + 1 + j];
+    private static void merge(Asset[] arr, int left, int mid, int right) {
+        Asset[] L = Arrays.copyOfRange(arr, left, mid + 1);
+        Asset[] R = Arrays.copyOfRange(arr, mid + 1, right + 1);
 
         int i = 0, j = 0, k = left;
-        while (i < n1 && j < n2) {
-            if (L[i].volume <= R[j].volume) {
-                arr[k++] = L[i++];
-            } else {
-                arr[k++] = R[j++];
-            }
+        while (i < L.length && j < R.length) {
+            if (L[i].returnRate <= R[j].returnRate) arr[k++] = L[i++];
+            else arr[k++] = R[j++];
         }
-        while (i < n1) arr[k++] = L[i++];
-        while (j < n2) arr[k++] = R[j++];
+        while (i < L.length) arr[k++] = L[i++];
+        while (j < R.length) arr[k++] = R[j++];
     }
 
-    // --- QUICK SORT IMPLEMENTATION (Average O(n log n)) ---
-    public static void quickSort(Trade[] arr, int low, int high) {
+    // --- QUICK SORT (Median-of-Three & Dual Criteria) ---
+    public static void quickSort(Asset[] arr, int low, int high) {
         if (low < high) {
-            int pi = partition(arr, low, high);
-            quickSort(arr, low, pi - 1);
-            quickSort(arr, pi + 1, high);
+            int pivotIndex = partition(arr, low, high);
+            quickSort(arr, low, pivotIndex - 1);
+            quickSort(arr, pivotIndex + 1, high);
         }
     }
 
-    private static int partition(Trade[] arr, int low, int high) {
-        int pivot = arr[high].volume;
-        int i = (low - 1);
+    private static int partition(Asset[] arr, int low, int high) {
+        // Median-of-Three Pivot Selection
+        int mid = low + (high - low) / 2;
+        if (arr[mid].returnRate > arr[low].returnRate) swap(arr, mid, low);
+        if (arr[high].returnRate > arr[low].returnRate) swap(arr, high, low);
+        if (arr[mid].returnRate > arr[high].returnRate) swap(arr, mid, high);
+
+        // Pivot is now at arr[high]
+        Asset pivot = arr[high];
+        int i = low - 1;
+
         for (int j = low; j < high; j++) {
-            // Logic for Descending Order
-            if (arr[j].volume > pivot) {
+            // Logic: Descending Return RATE. If tied, Ascending VOLATILITY.
+            if (arr[j].returnRate > pivot.returnRate ||
+                    (arr[j].returnRate == pivot.returnRate && arr[j].volatility < pivot.volatility)) {
                 i++;
-                Trade temp = arr[i];
-                arr[i] = arr[j];
-                arr[j] = temp;
+                swap(arr, i, j);
             }
         }
-        Trade temp = arr[i + 1];
-        arr[i + 1] = arr[high];
-        arr[high] = temp;
+        swap(arr, i + 1, high);
         return i + 1;
     }
 
-    // --- MERGE TWO SESSIONS LOGIC ---
-    public static Trade[] mergeSessions(Trade[] s1, Trade[] s2) {
-        Trade[] combined = new Trade[s1.length + s2.length];
-        int i = 0, j = 0, k = 0;
-        while (i < s1.length && j < s2.length) {
-            if (s1[i].volume <= s2[j].volume) combined[k++] = s1[i++];
-            else combined[k++] = s2[j++];
-        }
-        while (i < s1.length) combined[k++] = s1[i++];
-        while (j < s2.length) combined[k++] = s2[j++];
-        return combined;
+    private static void swap(Asset[] arr, int i, int j) {
+        Asset temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+    }
+
+    private static void printArray(Asset[] arr) {
+        for (Asset a : arr) System.out.println(" > " + a);
     }
 }
