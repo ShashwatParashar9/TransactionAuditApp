@@ -1,101 +1,135 @@
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 
 /**
- * UC2: Client Risk Score Ranking
- * This module handles risk prioritization using in-place sorting.
+ * UC3: Historical Trade Volume Analysis
+ * Focus: High-performance sorting (O(n log n)) and merging datasets.
  */
-class Client {
-    String name;
-    int riskScore;
-    double accountBalance;
+class Trade {
+    String id;
+    int volume;
 
-    public Client(String name, int riskScore, double accountBalance) {
-        this.name = name;
-        this.riskScore = riskScore;
-        this.accountBalance = accountBalance;
+    public Trade(String id, int volume) {
+        this.id = id;
+        this.volume = volume;
     }
 
     @Override
     public String toString() {
-        return String.format("%s [Risk: %d | Bal: $%.2f]", name, riskScore, accountBalance);
+        return id + ":" + volume;
     }
 }
 
 public class Main {
 
     public static void main(String[] args) {
-        // --- DATA INITIALIZATION ---
-        Client[] clients = {
-                new Client("Client C", 80, 5000),
-                new Client("Client A", 20, 15000),
-                new Client("Client B", 50, 2000),
-                new Client("Client D", 80, 12000),
-                new Client("Client E", 10, 3000)
+        // Initial dataset for Session A
+        Trade[] sessionA = {
+                new Trade("T3", 500),
+                new Trade("T1", 100),
+                new Trade("T2", 300)
         };
 
-        System.out.println("=== UC2: CLIENT RISK RANKING SYSTEM ===");
+        System.out.println("=== UC3: HISTORICAL TRADE VOLUME ANALYSIS ===");
 
-        // --- TASK 1: BUBBLE SORT (Ascending for Demo) ---
-        System.out.println("\nRunning Bubble Sort (Visualization Mode):");
-        bubbleSortRiskAsc(clients);
+        // 1. Merge Sort (Stable, Ascending)
+        System.out.println("\n--- Step 1: Merge Sort (Ascending Volume) ---");
+        mergeSort(sessionA, 0, sessionA.length - 1);
+        System.out.println("Sorted Session A: " + Arrays.toString(sessionA));
 
-        // --- TASK 2: INSERTION SORT (Descending Risk + Balance) ---
-        // This is the "Priority Sort" for the review team
-        System.out.println("\nRunning Insertion Sort (Priority Mode):");
-        insertionSortPriorityDesc(clients);
+        // 2. Quick Sort (In-place, Descending)
+        Trade[] sessionB = {
+                new Trade("T6", 200),
+                new Trade("T4", 600),
+                new Trade("T5", 400)
+        };
+        System.out.println("\n--- Step 2: Quick Sort (Descending Volume) ---");
+        quickSort(sessionB, 0, sessionB.length - 1);
+        System.out.println("Sorted Session B: " + Arrays.toString(sessionB));
 
-        // Display Results
-        for (Client c : clients) {
-            System.out.println(" > " + c);
-        }
+        // 3. Merge Two Sorted Lists (Ascending)
+        // Note: For merging, both lists must be sorted in the same direction.
+        // We'll quickly sort Session B ascending first to demonstrate the merge logic.
+        mergeSort(sessionB, 0, sessionB.length - 1);
 
-        // --- TASK 3: TOP 3 IDENTIFICATION ---
-        System.out.println("\n--- TOP 3 HIGH-PRIORITY REVIEWS ---");
-        for (int i = 0; i < 3 && i < clients.length; i++) {
-            System.out.println("RANK " + (i + 1) + ": " + clients[i]);
+        System.out.println("\n--- Step 3: Merging Morning & Afternoon Sessions ---");
+        Trade[] combinedReport = mergeSessions(sessionA, sessionB);
+        System.out.println("Combined Report: " + Arrays.toString(combinedReport));
+
+        // 4. Compute Total Volume
+        int totalVolume = 0;
+        for (Trade t : combinedReport) totalVolume += t.volume;
+        System.out.println("\nTOTAL TRADE VOLUME: " + totalVolume);
+    }
+
+    // --- MERGE SORT IMPLEMENTATION (O(n log n)) ---
+    public static void mergeSort(Trade[] arr, int left, int right) {
+        if (left < right) {
+            int mid = left + (right - left) / 2;
+            mergeSort(arr, left, mid);
+            mergeSort(arr, mid + 1, right);
+            merge(arr, left, mid, right);
         }
     }
 
-    /**
-     * BUBBLE SORT logic
-     * Focus: Adjacent swaps and O(1) space.
-     */
-    public static void bubbleSortRiskAsc(Client[] arr) {
-        int n = arr.length;
-        int swaps = 0;
-        for (int i = 0; i < n - 1; i++) {
-            for (int j = 0; j < n - i - 1; j++) {
-                if (arr[j].riskScore > arr[j + 1].riskScore) {
-                    // Manual Swap
-                    Client temp = arr[j];
-                    arr[j] = arr[j + 1];
-                    arr[j + 1] = temp;
-                    swaps++;
-                }
+    private static void merge(Trade[] arr, int left, int mid, int right) {
+        int n1 = mid - left + 1;
+        int n2 = right - mid;
+
+        Trade[] L = new Trade[n1];
+        Trade[] R = new Trade[n2];
+
+        for (int i = 0; i < n1; ++i) L[i] = arr[left + i];
+        for (int j = 0; j < n2; ++j) R[j] = arr[mid + 1 + j];
+
+        int i = 0, j = 0, k = left;
+        while (i < n1 && j < n2) {
+            if (L[i].volume <= R[j].volume) {
+                arr[k++] = L[i++];
+            } else {
+                arr[k++] = R[j++];
             }
         }
-        System.out.println("Bubble Sort finished with " + swaps + " swaps.");
+        while (i < n1) arr[k++] = L[i++];
+        while (j < n2) arr[k++] = R[j++];
     }
 
-    /**
-     * INSERTION SORT logic
-     * Focus: Shifting elements and handling multiple criteria (Risk + Balance).
-     */
-    public static void insertionSortPriorityDesc(Client[] arr) {
-        for (int i = 1; i < arr.length; i++) {
-            Client key = arr[i];
-            int j = i - 1;
-
-            // Descending logic: Shift if previous is smaller than current
-            // Criteria 1: Risk Score
-            // Criteria 2: Account Balance (Tie-breaker)
-            while (j >= 0 && (arr[j].riskScore < key.riskScore ||
-                    (arr[j].riskScore == key.riskScore && arr[j].accountBalance < key.accountBalance))) {
-                arr[j + 1] = arr[j];
-                j--;
-            }
-            arr[j + 1] = key;
+    // --- QUICK SORT IMPLEMENTATION (Average O(n log n)) ---
+    public static void quickSort(Trade[] arr, int low, int high) {
+        if (low < high) {
+            int pi = partition(arr, low, high);
+            quickSort(arr, low, pi - 1);
+            quickSort(arr, pi + 1, high);
         }
+    }
+
+    private static int partition(Trade[] arr, int low, int high) {
+        int pivot = arr[high].volume;
+        int i = (low - 1);
+        for (int j = low; j < high; j++) {
+            // Logic for Descending Order
+            if (arr[j].volume > pivot) {
+                i++;
+                Trade temp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = temp;
+            }
+        }
+        Trade temp = arr[i + 1];
+        arr[i + 1] = arr[high];
+        arr[high] = temp;
+        return i + 1;
+    }
+
+    // --- MERGE TWO SESSIONS LOGIC ---
+    public static Trade[] mergeSessions(Trade[] s1, Trade[] s2) {
+        Trade[] combined = new Trade[s1.length + s2.length];
+        int i = 0, j = 0, k = 0;
+        while (i < s1.length && j < s2.length) {
+            if (s1[i].volume <= s2[j].volume) combined[k++] = s1[i++];
+            else combined[k++] = s2[j++];
+        }
+        while (i < s1.length) combined[k++] = s1[i++];
+        while (j < s2.length) combined[k++] = s2[j++];
+        return combined;
     }
 }
